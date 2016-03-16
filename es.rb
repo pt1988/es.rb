@@ -42,6 +42,15 @@ class Agent
 	return @client.indices.refresh index: index_name
     end
 
+    def get_stats(index_name)
+	output= @client.indices.stats index: [index_name], docs: true, store: true
+#	puts	JSON.pretty_generate(JSON.parse(output))
+	JSON.parse(output)["indices"].each do | key , item |
+		puts "#{key} #{item["total"]["docs"]["count"]} #{item["total"]["store"]["size_in_bytes"]}"
+	end
+	return output
+    end
+
     def flush_index(index_name)
 	return @client.indices.flush index: index_name
     end
@@ -49,7 +58,7 @@ class Agent
     def delete_index(index_name)
 	@client.indices.flush index: index_name
 	#puts "delete index #{index_name}"
-	return @client.indices.delete index: index_name
+	result @client.indices.delete index: index_name
 	#result=@client.delete_by_query index: index_name , body: { query: {match_all: {}} }
 	#@client.indices.flush index: index_name
 	return result
@@ -85,12 +94,25 @@ elsif(fuction == "delete")
 		result=JSON.parse(agent.delete_index(ARGV[i]))
 		puts "{\"#{ARGV[i]}\":#{result}}"
 	end
+elsif (fuction == "stats")
+	agent = Agent.new
+	for i in 1..ARGV.count-1
+		result=JSON.parse(agent.get_stats(ARGV[i]))
+		#puts "{\"#{ARGV[i]}\":#{result}}"
+	end
+	if (ARGV.count == 1)
+		result=JSON.parse(agent.get_stats("_all"))
+		#puts JSON.pretty_generate(result)
+		#puts JSON.pretty_generate("{\"_all\":#{result}}")
+	end
 else
 	puts "[command]                      | description "
 	puts "list                           | for show indices list "
 	puts "refresh [index_1] .. [index_N] | for refresh index"
 	puts "flush [index_1] .. [index_N]   | for fulsh index"
 	puts "delete [index_1] .. [index_N]  | for remove index"
+	puts "stats [index_1] .. [index_N]   | for get index stat ([index] = _all for all index)"
 end
+
 
 #p client.indices.delete index: 'test'
